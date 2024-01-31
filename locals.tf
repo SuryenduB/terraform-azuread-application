@@ -1,19 +1,25 @@
-# TODO: insert locals here.
 locals {
-  resource_group_location            = try(data.azurerm_resource_group.parent[0].location, null)
-  role_definition_resource_substring = "/providers/Microsoft.Authorization/roleDefinitions"
-}
+  app_roles  = { for role in var.app_roles : role.display_name => role }
+  api_access = { for resource in var.api_access : resource.api_client_id => resource }
+  optional_claims = {
+    id_token     = var.id_token
+    access_token = var.access_token
+    saml2_token  = var.saml2_token
+  }
+  logo_image = filebase64(var.path_to_logo_image)
+  #generate map from var.id_token
+  claims_mapping_policy = {
+    definition = [
+      jsonencode(
+        var.claims_mapping_policy
 
-# Private endpoint application security group associations
-# Remove if this resource does not support private endpoints
-locals {
-  private_endpoint_application_security_group_associations = { for assoc in flatten([
-    for pe_k, pe_v in var.private_endpoints : [
-      for asg_k, asg_v in pe_v.application_security_group_associations : {
-        asg_key         = asg_k
-        pe_key          = pe_k
-        asg_resource_id = asg_v
-      }
-    ]
-  ]) : "${assoc.pe_key}-${assoc.asg_key}" => assoc }
+      )
+    ],
+    display_name = "EntraID Claims Mapping Policy - ${var.display_name}"
+  }
+  create_claim_mapping_policy = var.claims_mapping_policy != null ? true : false
+
+
+
+
 }
